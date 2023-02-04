@@ -1,0 +1,16 @@
+{
+    "name": "Mochineko.WasmtimeDotNetUnity.Demo",
+    "rootNamespace": "",
+    "references": [
+        "GUID:64ea58b2984ae4d27ad739b40981f983"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
