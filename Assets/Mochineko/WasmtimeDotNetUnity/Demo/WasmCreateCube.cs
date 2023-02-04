@@ -3,37 +3,35 @@ using Wasmtime;
 
 namespace Mochineko.WastimeDotNetUnity.Demo
 {
-    internal sealed class WasmSerialization : MonoBehaviour
+    internal sealed class WasmCreateCube : MonoBehaviour
     {
         private void Start()
         {
             const string wat = @"
 (module
   (type $t0 (func))
-  (import """" ""hello"" (func $.hello (type $t0)))
+  (import """" ""create_cube"" (func $.create_cube (type $t0)))
   (func $run
-    call $.hello
+    call $.create_cube
   )
   (export ""run"" (func $run))
 )";
 
             using var engine = new Engine();
-            using var module = Module.FromText(engine, "hello", wat);
-
-            var serializedModule = module.Serialize(); // Compiled binary(.wasmu)
-
-            using var deserializedModule = Module.Deserialize(engine, "hello", serializedModule);
-
+            using var module = Module.FromText(engine, "create_cube", wat);
             using var linker = new Linker(engine);
             using var store = new Store(engine);
 
             linker.Define(
                 "",
-                "hello",
-                Function.FromCallback(store, () => Debug.Log("Hello from C#, precomplied WebAssembly!"))
+                "create_cube",
+                Function.FromCallback(store, () => {
+                    var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                    cube.name = "Cube created from WebAssembly"; 
+                })
             );
 
-            var instance = linker.Instantiate(store, deserializedModule);
+            var instance = linker.Instantiate(store, module);
 
             var run = instance.GetAction("run");
             if (run is null)
