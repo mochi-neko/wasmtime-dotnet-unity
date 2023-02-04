@@ -1,6 +1,6 @@
 # wasmtime-dotnet-unity
 
-Provides the [Wasmtime](https://github.com/bytecodealliance/wasmtime)([wasmtime-dotnet](https://github.com/bytecodealliance/wasmtime-dotnet)) for Unity Package Manager(UPM).
+Provides the [Wasmtime](https://github.com/bytecodealliance/wasmtime)([wasmtime-dotnet](https://github.com/bytecodealliance/wasmtime-dotnet)) for Unity via Unity Package Manager(UPM).
 
 
 ## How to import by UMP
