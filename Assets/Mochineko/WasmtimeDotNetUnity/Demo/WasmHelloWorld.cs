@@ -7,10 +7,18 @@ namespace Mochineko.WastimeDotNetUnity.Demo
     {
         private void Start()
         {
-            var watPath = System.IO.Path.Combine(Application.streamingAssetsPath, "hello.wat");
+            const string wat = @"
+(module
+  (type $t0 (func))
+  (import """" ""hello"" (func $.hello (type $t0)))
+  (func $run
+    call $.hello
+  )
+  (export ""run"" (func $run))
+)";
 
             using var engine = new Engine();
-            using var module = Module.FromTextFile(engine, watPath);
+            using var module = Module.FromText(engine, "hello", wat);
             using var linker = new Linker(engine);
             using var store = new Store(engine);
 
