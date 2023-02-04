@@ -1,0 +1,11 @@
+{
+  "name": "com.bytecodealliance.wasmtime",
+  "version": "5.0.0",
+  "displayName": "wastime",
+  "description": "A fast and secure runtime for WebAssembly",
+  "unity": "2021.3",
+  "author": {
+    "name": "Bytecode Alliance",
+    "url": "https://github.com/bytecodealliance/wasmtime"
+  }
+}

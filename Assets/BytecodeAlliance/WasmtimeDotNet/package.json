@@ -1,0 +1,11 @@
+{
+  "name": "com.bytecodealliance.wasmtime-dotnet",
+  "version": "5.0.0",
+  "displayName": "wastime-dotnet",
+  "description": ".NET embedding of Wasmtime",
+  "unity": "2021.3",
+  "author": {
+    "name": "Bytecode Alliance",
+    "url": "https://github.com/bytecodealliance/wasmtime-dotnet"
+  }
+}
