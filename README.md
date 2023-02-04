@@ -42,4 +42,4 @@ Planned
 
 ## LICENSE
 
-[MIT LICENSE](https://github.com/mochi-neko/wasmtime-dotnet-unity/blob/main/LICENSE)
+[MIT license](https://github.com/mochi-neko/wasmtime-dotnet-unity/blob/main/LICENSE)
