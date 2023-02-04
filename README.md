@@ -10,7 +10,7 @@ Add these dependencies:
 ```json
 {
   "dependencies": {
-     "com.bytecodealliance.wasmtime": "https://github.com/mochi-neko/wasmtime-dotnet-unity.git?path=/Assets/BytecodeAlliance/Wasmtime",
+    "com.bytecodealliance.wasmtime": "https://github.com/mochi-neko/wasmtime-dotnet-unity.git?path=/Assets/BytecodeAlliance/Wasmtime",
     "com.bytecodealliance.wasmtime-dotnet": "https://github.com/mochi-neko/wasmtime-dotnet-unity.git?path=/Assets/BytecodeAlliance/WasmtimeDotNet",
   }
 }
