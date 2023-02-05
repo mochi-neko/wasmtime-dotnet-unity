@@ -2,6 +2,8 @@
 
 Provides the [Wasmtime](https://github.com/bytecodealliance/wasmtime)([wasmtime-dotnet](https://github.com/bytecodealliance/wasmtime-dotnet)) for Unity via Unity Package Manager(UPM).
 
+These packages enable you to run WebAssembly(Wasm, WASI) code on Unity with the Wasmtime/Cranelift backend.
+
 
 ## How to import by UMP
 
