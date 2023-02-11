@@ -1,5 +1,17 @@
 # wasmtime-dotnet-unity
 
+---
+
+**NOTICE!!!**
+
+Now it has only been confirmed to work in the Unity **Editor**.
+
+When I build by IL2CPP for Apple Silicon macOS、this error has occured then does not work:
+
+`NotSupportedException: IL2CPP does not support marshaling delegates that point to instance methods to native code.`.
+
+---
+
 Provides the [Wasmtime](https://github.com/bytecodealliance/wasmtime)([wasmtime-dotnet](https://github.com/bytecodealliance/wasmtime-dotnet)) for Unity via Unity Package Manager(UPM).
 
 These packages enable you to run WebAssembly(Wasm, WASI) code on Unity with the Wasmtime/Cranelift backend.
