@@ -1,0 +1,11 @@
+[target.aarch64-linux-android]
+linker = "${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-androidr25c-clang"
+
+[target.armv7-linux-androideabi]
+linker = "${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabir25c-clang"
+
+[target.i686-linux-android]
+linker = "${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/i686-linux-androidr25c-clang"
+
+[target.x86_64-linux-android]
+linker = "${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-androidr25c-clang"
