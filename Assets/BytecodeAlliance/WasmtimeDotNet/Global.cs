@@ -50,6 +50,17 @@ namespace Wasmtime
             return Value.GetHashCode();
         }
 
+        /// <inheritdoc />
+        public override string ToString()
+        {
+            return Value switch
+            {
+                0 => nameof(Immutable),
+                1 => nameof(Mutable),
+                _ => throw new ArgumentOutOfRangeException()
+            };
+        }
+
         /// <summary>
         /// Compare a to b and return true if they are equal
         /// </summary>
@@ -163,18 +174,24 @@ namespace Wasmtime
                 return null;
             }
 
-            return new Accessor<T>(this, store);
+            if (_accessor is not Accessor<T> accessor)
+            {
+                accessor = new Accessor<T>(this, store);
+                _accessor = accessor;
+            }
+
+            return accessor;
         }
 
         /// <summary>
         /// Gets the value kind of the global.
         /// </summary>
-        public ValueKind Kind { get; private set; }
+        public ValueKind Kind { get; }
 
         /// <summary>
         /// Gets the mutability of the global.
         /// </summary>
-        public Mutability Mutability { get; private set; }
+        public Mutability Mutability { get; }
 
         Extern IExternal.AsExtern()
         {
@@ -184,6 +201,8 @@ namespace Wasmtime
                 of = new ExternUnion { global = this.global }
             };
         }
+
+        Store? IExternal.Store => store;
 
         internal Global(Store store, ExternGlobal global)
         {
@@ -241,6 +260,7 @@ namespace Wasmtime
 
         private readonly Store store;
         private readonly ExternGlobal global;
+        private object? _accessor;
 
         /// <summary>
         /// A typed accessor for a WebAssembly global value.
@@ -309,6 +329,8 @@ namespace Wasmtime
             {
                 return ((IExternal)_global).AsExtern();
             }
+
+            Store? IExternal.Store => _store;
         }
     }
 }

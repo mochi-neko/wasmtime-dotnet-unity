@@ -1,7 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
-using Microsoft.Win32.SafeHandles;
 
 namespace Wasmtime
 {
@@ -524,7 +524,7 @@ namespace Wasmtime
 
             GC.KeepAlive(_store);
 
-            return new Function(_store, ext.of.func);
+            return _store.GetCachedExtern(ext.of.func);
         }
 
         /// <summary>
@@ -559,7 +559,7 @@ namespace Wasmtime
 
             GC.KeepAlive(_store);
 
-            return new Memory(_store, ext.of.memory);
+            return _store.GetCachedExtern(ext.of.memory);
         }
 
         /// <summary>
@@ -577,15 +577,111 @@ namespace Wasmtime
 
             GC.KeepAlive(_store);
 
-            return new Global(_store, ext.of.global);
+            return _store.GetCachedExtern(ext.of.global);
+        }
+
+        /// <summary>
+        /// Get all exported functions
+        /// </summary>
+        /// <returns>An enumerable of functions exported from this instance</returns>
+        public IEnumerable<(string Name, Function Function)> GetFunctions()
+        {
+            for (var i = 0; i < int.MaxValue; i++)
+            {
+                if (TryGetExtern(i, ExternKind.Func) is not var (name, @extern))
+                {
+                    break;
+                }
+
+                yield return (name, _store.GetCachedExtern(@extern.of.func));
+            }
+
+            GC.KeepAlive(_store);
+        }
+
+        /// <summary>
+        /// Get all exported tables
+        /// </summary>
+        /// <returns>An enumerable of tables exported from this instance</returns>
+        public IEnumerable<(string Name, Table Table)> GetTables()
+        {
+            for (var i = 0; i < int.MaxValue; i++)
+            {
+                if (TryGetExtern(i, ExternKind.Table) is not var (name, @extern))
+                {
+                    break;
+                }
+
+                yield return (name, new Table(_store, @extern.of.table));
+            }
+
+            GC.KeepAlive(_store);
+        }
+
+        /// <summary>
+        /// Get all exported memories
+        /// </summary>
+        /// <returns>An enumerable of memories exported from this instance</returns>
+        public IEnumerable<(string Name, Memory Memory)> GetMemories()
+        {
+            for (var i = 0; i < int.MaxValue; i++)
+            {
+                if (TryGetExtern(i, ExternKind.Memory) is not var (name, @extern))
+                {
+                    break;
+                }
+
+                yield return (name, _store.GetCachedExtern(@extern.of.memory));
+            }
+
+            GC.KeepAlive(_store);
+        }
+
+        /// <summary>
+        /// Get all exported globals
+        /// </summary>
+        /// <returns>An enumerable of globals exported from this instance</returns>
+        public IEnumerable<(string Name, Global Global)> GetGlobals()
+        {
+            for (var i = 0; i < int.MaxValue; i++)
+            {
+                if (TryGetExtern(i, ExternKind.Global) is not var (name, @extern))
+                {
+                    break;
+                }
+
+                yield return (name, _store.GetCachedExtern(@extern.of.global));
+            }
+
+            GC.KeepAlive(_store);
+        }
+
+        private (string name, Extern @extern)? TryGetExtern(int index, ExternKind? type = null)
+        {
+            unsafe
+            {
+                if (!Native.wasmtime_instance_export_nth(_store.Context.handle, instance, (UIntPtr)index, out var namePtr, out var nameLen, out var @extern))
+                {
+                    return null;
+                }
+
+                if (type != null && type.Value != @extern.kind)
+                {
+                    return  null;
+                }
+
+                var name = Encoding.UTF8.GetString(namePtr, checked((int)nameLen));
+                return (name, @extern);
+            }
         }
 
         private bool TryGetExtern(StoreContext context, string name, out Extern ext)
         {
+            using var nameBytes = name.ToUTF8(stackalloc byte[Math.Min(64, name.Length * 2)]);
+
             unsafe
             {
-                var nameBytes = Encoding.UTF8.GetBytes(name);
-                fixed (byte* ptr = nameBytes)
+                fixed (byte* ptr = nameBytes.Span)
                 {
                     return Native.wasmtime_instance_export_get(context.handle, this.instance, ptr, (UIntPtr)nameBytes.Length, out ext);
                 }
@@ -603,21 +699,6 @@ namespace Wasmtime
             this.instance = instance;
         }
 
-        internal class TypeHandle : SafeHandleZeroOrMinusOneIsInvalid
-        {
-            public TypeHandle(IntPtr handle)
-                : base(true)
-            {
-                SetHandle(handle);
-            }
-
-            protected override bool ReleaseHandle()
-            {
-                Native.wasmtime_instancetype_delete(handle);
-                return true;
-            }
-        }
-
         private static class Native
         {
             [DllImport(Engine.LibraryName)]
@@ -630,9 +711,6 @@ namespace Wasmtime
             [DllImport(Engine.LibraryName)]
             [return: MarshalAs(UnmanagedType.I1)]
             public static extern unsafe bool wasmtime_instance_export_nth(IntPtr context, in ExternInstance instance, UIntPtr index, out byte* name, out UIntPtr len, out Extern ext);
-
-            [DllImport(Engine.LibraryName)]
-            public static extern void wasmtime_instancetype_delete(IntPtr handle);
         }
 
         private readonly Store _store;

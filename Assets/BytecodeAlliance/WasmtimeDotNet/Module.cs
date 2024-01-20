@@ -28,6 +28,8 @@ namespace Wasmtime
     internal interface IExternal
     {
         Extern AsExtern();
+
+        Store? Store { get; }
     }
 
     /// <summary>
@@ -385,7 +387,7 @@ namespace Wasmtime
         {
             get
             {
-                if (handle.IsInvalid)
+                if (handle.IsInvalid || handle.IsClosed)
                 {
                     throw new ObjectDisposedException(typeof(Module).FullName);
                 }
@@ -436,7 +438,7 @@ namespace Wasmtime
             public static extern unsafe IntPtr wasmtime_module_deserialize(Engine.Handle engine, byte* bytes, UIntPtr size, out IntPtr handle);
 
             [DllImport(Engine.LibraryName)]
-            public static extern IntPtr wasmtime_module_deserialize_file(Engine.Handle engine, [MarshalAs(UnmanagedType.LPUTF8Str)] string path, out IntPtr handle);
+            public static extern IntPtr wasmtime_module_deserialize_file(Engine.Handle engine, [MarshalAs(Extensions.LPUTF8Str)] string path, out IntPtr handle);
         }
 
         private readonly Handle handle;

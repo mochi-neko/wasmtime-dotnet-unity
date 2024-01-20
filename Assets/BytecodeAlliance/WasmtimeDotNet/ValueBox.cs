@@ -84,8 +84,8 @@ namespace Wasmtime
         public Function AsFunction(Store store)
         {
             ThrowIfNotOfCorrectKind(ValueKind.FuncRef);
-
-            return new Function(store, Union.funcref);
+            
+            return store.GetCachedExtern(Union.funcref);
         }
 
         /// <summary>
@@ -210,7 +210,11 @@ namespace Wasmtime
             var union = new ValueUnion();
             unsafe
             {
+#if NETSTANDARD2_0
+                value.CopyTo(new Span<byte>(union.v128.bytes, 16));
+#else
                 value.CopyTo(union.v128.AsSpan());
+#endif
             }
 
             return new ValueBox(ValueKind.V128, union);
@@ -390,7 +394,7 @@ namespace Wasmtime
 
         public Function Unbox(Store store, ValueBox value)
         {
-            return new Function(store, value.Union.funcref);
+            return store.GetCachedExtern(value.Union.funcref);
         }
     }
 

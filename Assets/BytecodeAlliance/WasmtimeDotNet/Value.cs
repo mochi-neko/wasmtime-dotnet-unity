@@ -59,6 +59,11 @@ namespace Wasmtime
 
     internal static class ValueType
     {
+        public static IntPtr FromKind(TableKind kind)
+        {
+            return FromKind((ValueKind)kind);
+        }
+
         public static IntPtr FromKind(ValueKind kind)
         {
             switch (kind)
@@ -251,6 +256,11 @@ namespace Wasmtime
             }
         }
 
+        public static Value FromObject(object? o, TableKind kind)
+        {
+            return FromObject(o, (ValueKind)kind);
+        }
+
         public static Value FromObject(object? o, ValueKind kind)
         {
             var value = new Value();
@@ -353,7 +363,7 @@ namespace Wasmtime
                     return ResolveExternRef();
 
                 case ValueKind.FuncRef:
-                    return new Function(store, of.funcref);
+                    return store.GetCachedExtern(of.funcref);
 
                 default:
                     throw new NotSupportedException("Unsupported value kind.");
@@ -391,10 +401,10 @@ namespace Wasmtime
             public static extern void wasmtime_externref_delete(IntPtr externref);
 
             [DllImport(Engine.LibraryName)]
-            public static extern IntPtr wasmtime_externref_from_raw(IntPtr context, nuint raw);
+            public static extern IntPtr wasmtime_externref_from_raw(IntPtr context, IntPtr raw);
 
             [DllImport(Engine.LibraryName)]
-            public static extern nuint wasmtime_externref_to_raw(IntPtr context, IntPtr externref);
+            public static extern IntPtr wasmtime_externref_to_raw(IntPtr context, IntPtr externref);
         }
 
         public static readonly Native.Finalizer Finalizer = (p) => GCHandle.FromIntPtr(p).Free();

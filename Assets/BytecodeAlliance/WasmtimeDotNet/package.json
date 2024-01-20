@@ -1,6 +1,6 @@
 {
   "name": "com.bytecodealliance.wasmtime-dotnet",
-  "version": "5.0.0",
+  "version": "16.0.0",
   "displayName": "wastime-dotnet",
   "description": ".NET embedding of Wasmtime",
   "unity": "2021.3",
