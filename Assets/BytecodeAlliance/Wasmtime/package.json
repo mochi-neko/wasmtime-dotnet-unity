@@ -1,6 +1,6 @@
 {
   "name": "com.bytecodealliance.wasmtime",
-  "version": "5.0.0",
+  "version": "16.0.0",
   "displayName": "wastime",
   "description": "A fast and secure runtime for WebAssembly",
   "unity": "2021.3",
