@@ -2,7 +2,6 @@ using System;
 using System.Buffers.Binary;
 using System.Runtime.InteropServices;
 using System.Text;
-using Microsoft.Win32.SafeHandles;
 
 namespace Wasmtime
 {
@@ -233,6 +232,14 @@ namespace Wasmtime
         public unsafe Span<T> GetSpan<T>(long address, int length)
             where T : unmanaged
         {
+            var span = GetSpan<T>(store.Context, memory, address, length);
+            GC.KeepAlive(store);
+            return span;
+        }
+
+        internal static unsafe Span<T> GetSpan<T>(StoreContext context, ExternMemory memory, long address, int length)
+            where T : unmanaged
+        {
             if (address < 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(address));
@@ -243,11 +250,9 @@ namespace Wasmtime
                 throw new ArgumentOutOfRangeException(nameof(length));
             }
 
-            var context = store.Context;
-            var data = Native.wasmtime_memory_data(context.handle, this.memory);
-            GC.KeepAlive(store);
+            var data = Native.wasmtime_memory_data(context.handle, memory);
 
-            var memoryLength = this.GetLength();
+            var memoryLength = checked((long)Native.wasmtime_memory_data_size(context.handle, memory));
 
             // Note: A Span<T> can span more than 2 GiB bytes if sizeof(T) > 1.
             long byteLength = (long)length * sizeof(T);
@@ -476,7 +481,7 @@ namespace Wasmtime
         /// <returns>Returns the single read from memory.</returns>
         public float ReadSingle(long address)
         {
-            return BitConverter.Int32BitsToSingle(ReadInt32(address));
+            return Extensions.Int32BitsToSingle(ReadInt32(address));
         }
 
         /// <summary>
@@ -486,7 +491,7 @@ namespace Wasmtime
         /// <param name="value">The single to write.</param>
         public void WriteSingle(long address, float value)
         {
-            WriteInt32(address, BitConverter.SingleToInt32Bits(value));
+            WriteInt32(address, Extensions.SingleToInt32Bits(value));
         }
 
         /// <summary>
@@ -541,6 +546,9 @@ namespace Wasmtime
                 of = new ExternUnion { memory = this.memory }
             };
         }
+
+        Store? IExternal.Store => store;
+
         internal Memory(Store store, ExternMemory memory)
         {
             this.memory = memory;
@@ -563,21 +571,6 @@ namespace Wasmtime
             finally
             {
                 Native.wasm_memorytype_delete(typeHandle);
-            }
-        }
-
-        internal class TypeHandle : SafeHandleZeroOrMinusOneIsInvalid
-        {
-            public TypeHandle(IntPtr handle)
-                : base(true)
-            {
-                SetHandle(handle);
-            }
-
-            protected override bool ReleaseHandle()
-            {
-                Native.wasm_memorytype_delete(handle);
-                return true;
             }
         }
 

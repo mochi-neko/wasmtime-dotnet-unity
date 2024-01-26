@@ -132,10 +132,10 @@ namespace Wasmtime
             }
 
             // Validate the return type(s)
-            if (returnType != null)
+            if(returnType != null)
             {
                 // Multiple return types are represented by a tuple.
-                if (typeof(ITuple).IsAssignableFrom(returnType))
+                if (returnType.IsTupleType())
                 {
                     // Get the types from the tuple
                     var returnTypes = returnType.GetGenericArguments();
@@ -416,7 +416,7 @@ namespace Wasmtime
             IntPtr trap;
             fixed (ValueRaw* argsAndResultsPtr = argumentsAndResults)
             {
-                error = Native.wasmtime_func_call_unchecked(storeContext.handle, func, argsAndResultsPtr, out trap);
+                error = Native.wasmtime_func_call_unchecked(storeContext.handle, func, argsAndResultsPtr, (nuint)argumentsAndResults.Length, out trap);
 
                 // See comments above for the two reasons why the `Store` must be kept alive here.
                 GC.KeepAlive(store);
@@ -438,6 +438,8 @@ namespace Wasmtime
                 of = new ExternUnion { func = this.func }
             };
         }
+
+        Store? IExternal.Store => store;
 
         internal Function()
         {
@@ -716,16 +718,16 @@ namespace Wasmtime
             public static unsafe extern IntPtr wasmtime_func_call(IntPtr context, in ExternFunc func, Value* args, nuint nargs, Value* results, nuint nresults, out IntPtr trap);
 
             [DllImport(Engine.LibraryName)]
-            public static unsafe extern IntPtr wasmtime_func_call_unchecked(IntPtr context, in ExternFunc func, ValueRaw* args_and_results, out IntPtr trap);
+            public static unsafe extern IntPtr wasmtime_func_call_unchecked(IntPtr context, in ExternFunc func, ValueRaw* args_and_results, nuint args_and_results_len, out IntPtr trap);
 
             [DllImport(Engine.LibraryName)]
             public static extern IntPtr wasmtime_func_type(IntPtr context, in ExternFunc func);
 
             [DllImport(Engine.LibraryName)]
-            public static unsafe extern void wasmtime_func_from_raw(IntPtr context, nuint raw, out ExternFunc func);
+            public static unsafe extern void wasmtime_func_from_raw(IntPtr context, IntPtr raw, out ExternFunc func);
 
             [DllImport(Engine.LibraryName)]
-            public static unsafe extern nuint wasmtime_func_to_raw(IntPtr context, in ExternFunc func);
+            public static unsafe extern IntPtr wasmtime_func_to_raw(IntPtr context, in ExternFunc func);
 
             [DllImport(Engine.LibraryName)]
             public static extern IntPtr wasm_functype_new(in ValueTypeArray parameters, in ValueTypeArray results);

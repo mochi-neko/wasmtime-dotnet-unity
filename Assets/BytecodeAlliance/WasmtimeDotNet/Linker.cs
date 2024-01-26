@@ -1,6 +1,5 @@
 using System;
 using System.Linq;
-using System.Buffers;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -14,6 +13,8 @@ namespace Wasmtime
     /// </summary>
     public partial class Linker : IDisposable
     {
+        private const int StackallocThreshold = 256;
+
         /// <summary>
         /// Constructs a new linker from the given engine.
         /// </summary>
@@ -39,13 +40,8 @@ namespace Wasmtime
             }
         }
 
-        /// <summary>
-        /// Defines an item in the linker.
-        /// </summary>
-        /// <param name="module">The module name of the item.</param>
-        /// <param name="name">The name of the item.</param>
-        /// <param name="item">The item being defined (e.g. function, global, table, etc.).</param>
-        public void Define(string module, string name, object item)
+        private void Define<T>(string module, string name, T item)
+            where T : IExternal
         {
             if (module is null)
             {
@@ -57,27 +53,85 @@ namespace Wasmtime
                 throw new ArgumentNullException(nameof(name));
             }
 
-            var external = item as IExternal;
-            if (external is null)
+            var store = item.Store;
+            if (store is null)
             {
-                throw new ArgumentException($"Objects of type `{item.GetType()}` cannot be defined in a linker.");
+                throw new ArgumentException($"The item is not associated with a store.");
             }
 
-            var ext = external.AsExtern();
+            var ext = item.AsExtern();
+            
+            using var nameBytes = name.ToUTF8(stackalloc byte[Math.Min(64, name.Length * 2)]);
+            using var moduleBytes = module.ToUTF8(stackalloc byte[Math.Min(64, module.Length * 2)]);
 
             unsafe
             {
-                var moduleBytes = Encoding.UTF8.GetBytes(module);
-                var nameBytes = Encoding.UTF8.GetBytes(name);
-                fixed (byte* modulePtr = moduleBytes, namePtr = nameBytes)
+                fixed (byte* modulePtr = moduleBytes.Span, namePtr = nameBytes.Span)
                 {
-                    var error = Native.wasmtime_linker_define(handle, modulePtr, (UIntPtr)moduleBytes.Length, namePtr, (UIntPtr)nameBytes.Length, ext);
+                    var error = Native.wasmtime_linker_define(handle, store.Context.handle, modulePtr, (UIntPtr)moduleBytes.Length, namePtr, (UIntPtr)nameBytes.Length, ext);
                     if (error != IntPtr.Zero)
                     {
                         throw WasmtimeException.FromOwnedError(error);
                     }
                 }
             }
+
+            GC.KeepAlive(store);
+        }
+
+        /// <summary>
+        /// Defines an item in the linker.
+        /// </summary>
+        /// <param name="module">The module name of the item.</param>
+        /// <param name="name">The name of the item.</param>
+        /// <param name="function">The item being defined</param>
+        public void Define(string module, string name, Function function)
+        {
+            Define<Function>(module, name, function);
+        }
+
+        /// <summary>
+        /// Defines an item in the linker.
+        /// </summary>
+        /// <param name="module">The module name of the item.</param>
+        /// <param name="name">The name of the item.</param>
+        /// <param name="global">The item being defined</param>
+        public void Define(string module, string name, Global global)
+        {
+            Define<Global>(module, name, global);
+        }
+
+        /// <summary>
+        /// Defines an item in the linker.
+        /// </summary>
+        /// <param name="module">The module name of the item.</param>
+        /// <param name="name">The name of the item.</param>
+        /// <param name="global">The item being defined</param>
+        public void Define<T>(string module, string name, Global.Accessor<T> global)
+        {
+            Define<Global.Accessor<T>>(module, name, global);
+        }
+
+        /// <summary>
+        /// Defines an item in the linker.
+        /// </summary>
+        /// <param name="module">The module name of the item.</param>
+        /// <param name="name">The name of the item.</param>
+        /// <param name="memory">The item being defined</param>
+        public void Define(string module, string name, Memory memory)
+        {
+            Define<Memory>(module, name, memory);
+        }
+
+        /// <summary>
+        /// Defines an item in the linker.
+        /// </summary>
+        /// <param name="module">The module name of the item.</param>
+        /// <param name="name">The name of the item.</param>
+        /// <param name="table">The item being defined</param>
+        public void Define(string module, string name, Table table)
+        {
+            Define<Table>(module, name, table);
         }
 
         /// <summary>
@@ -235,7 +289,7 @@ namespace Wasmtime
                         throw WasmtimeException.FromOwnedError(error);
                     }
 
-                    return new Function(store, func);
+                    return store.GetCachedExtern(func);
                 }
             }
         }
@@ -262,7 +316,7 @@ namespace Wasmtime
 
             GC.KeepAlive(store);
 
-            return new Function(store, ext.of.func);
+            return store.GetCachedExtern(ext.of.func);
         }
 
         /// <summary>
@@ -312,7 +366,7 @@ namespace Wasmtime
 
             GC.KeepAlive(store);
 
-            return new Memory(store, ext.of.memory);
+            return store.GetCachedExtern(ext.of.memory);
         }
 
         /// <summary>
@@ -382,22 +436,13 @@ namespace Wasmtime
                     return Function.InvokeUntypedCallback(callback, callerPtr, args, (int)nargs, results, (int)nresults, resultKinds);
                 };
 
-                const int StackallocThreshold = 256;
-
-                byte[]? moduleBytesBuffer = null;
-                var moduleLength = Encoding.UTF8.GetByteCount(module);
-                Span<byte> moduleBytes = moduleLength <= StackallocThreshold ? stackalloc byte[moduleLength] : (moduleBytesBuffer = ArrayPool<byte>.Shared.Rent(moduleLength)).AsSpan()[..moduleLength];
-                Encoding.UTF8.GetBytes(module, moduleBytes);
-
-                byte[]? nameBytesBuffer = null;
-                var nameLength = Encoding.UTF8.GetByteCount(name);
-                Span<byte> nameBytes = nameLength <= StackallocThreshold ? stackalloc byte[nameLength] : (nameBytesBuffer = ArrayPool<byte>.Shared.Rent(nameLength)).AsSpan()[..nameLength];
-                Encoding.UTF8.GetBytes(name, nameBytes);
+                using var nameBytes = name.ToUTF8(stackalloc byte[Math.Min(64, name.Length * 2)]);
+                using var moduleBytes = module.ToUTF8(stackalloc byte[Math.Min(64, module.Length * 2)]);
 
                 var funcType = Function.CreateFunctionType(parameterKinds, resultKinds);
                 try
                 {
-                    fixed (byte* modulePtr = moduleBytes, namePtr = nameBytes)
+                    fixed (byte* modulePtr = moduleBytes.Span, namePtr = nameBytes.Span)
                     {
                         var error = Native.wasmtime_linker_define_func(
                             handle,
@@ -420,15 +465,6 @@ namespace Wasmtime
                 finally
                 {
                     Function.Native.wasm_functype_delete(funcType);
-
-                    if (moduleBytesBuffer is not null)
-                    {
-                        ArrayPool<byte>.Shared.Return(moduleBytesBuffer);
-                    }
-                    if (nameBytesBuffer is not null)
-                    {
-                        ArrayPool<byte>.Shared.Return(nameBytesBuffer);
-                    }
                 }
             }
         }
@@ -437,9 +473,10 @@ namespace Wasmtime
         {
             unsafe
             {
-                var moduleBytes = Encoding.UTF8.GetBytes(module);
-                var nameBytes = Encoding.UTF8.GetBytes(name);
-                fixed (byte* modulePtr = moduleBytes, namePtr = nameBytes)
+                using var moduleBytes = module.ToUTF8(stackalloc byte[Math.Min(64, module.Length * 2)]);
+                using var nameBytes = name.ToUTF8(stackalloc byte[Math.Min(64, name.Length * 2)]);
+
+                fixed (byte* modulePtr = moduleBytes.Span, namePtr = nameBytes.Span)
                 {
                     return Native.wasmtime_linker_get(handle, context.handle, modulePtr, (UIntPtr)moduleBytes.Length, namePtr, (UIntPtr)nameBytes.Length, out ext);
                 }
@@ -473,7 +510,7 @@ namespace Wasmtime
             public static extern void wasmtime_linker_allow_shadowing(Handle linker, [MarshalAs(UnmanagedType.I1)] bool allow);
 
             [DllImport(Engine.LibraryName)]
-            public static unsafe extern IntPtr wasmtime_linker_define(Handle linker, byte* module, nuint moduleLen, byte* name, nuint nameLen, in Extern item);
+            public static unsafe extern IntPtr wasmtime_linker_define(Handle linker, IntPtr context, byte* module, nuint moduleLen, byte* name, nuint nameLen, in Extern item);
 
             [DllImport(Engine.LibraryName)]
             public static extern IntPtr wasmtime_linker_define_wasi(Handle linker);
